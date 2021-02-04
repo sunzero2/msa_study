@@ -3,6 +3,8 @@ package com.example.mas_study.service;
 import com.example.mas_study.domain.Multiplication;
 import com.example.mas_study.domain.MultiplicationResultAttempt;
 import com.example.mas_study.domain.User;
+import com.example.mas_study.event.EventDispatcher;
+import com.example.mas_study.event.MultiplicationSolvedEvent;
 import com.example.mas_study.repository.MultiplicationResultAttemptRepository;
 import com.example.mas_study.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,12 +21,17 @@ public class MultiplicationServiceImpl implements MultiplicationService {
     private RandomGeneratorService randomGeneratorService;
     private MultiplicationResultAttemptRepository attemptRepository;
     private UserRepository userRepository;
+    private EventDispatcher eventDispatcher;
 
     @Autowired
-    public MultiplicationServiceImpl(final RandomGeneratorService randomGeneratorService, final MultiplicationResultAttemptRepository attemptRepository, final UserRepository userRepository) {
+    public MultiplicationServiceImpl(final RandomGeneratorService randomGeneratorService,
+                                     final MultiplicationResultAttemptRepository attemptRepository,
+                                     final UserRepository userRepository,
+                                     final EventDispatcher eventDispatcher) {
         this.randomGeneratorService = randomGeneratorService;
         this.attemptRepository = attemptRepository;
         this.userRepository = userRepository;
+        this.eventDispatcher = eventDispatcher;
     }
 
     @Override
@@ -48,6 +55,12 @@ public class MultiplicationServiceImpl implements MultiplicationService {
         MultiplicationResultAttempt checkedAttempt = new MultiplicationResultAttempt(
                 user.orElse(resultAttempt.getUser()), resultAttempt.getMultiplication(), resultAttempt.getResultAttempt(), isCorrect);
         attemptRepository.save(checkedAttempt);
+
+        eventDispatcher.send(new MultiplicationSolvedEvent(
+                checkedAttempt.getId(),
+                checkedAttempt.getUser().getId(),
+                checkedAttempt.isCorrect()
+        ));
 
         return isCorrect;
     }
