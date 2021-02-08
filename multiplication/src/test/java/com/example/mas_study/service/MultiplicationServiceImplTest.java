@@ -3,6 +3,7 @@ package com.example.mas_study.service;
 import com.example.mas_study.domain.Multiplication;
 import com.example.mas_study.domain.MultiplicationResultAttempt;
 import com.example.mas_study.domain.User;
+import com.example.mas_study.event.EventDispatcher;
 import com.example.mas_study.repository.MultiplicationResultAttemptRepository;
 import com.example.mas_study.repository.UserRepository;
 import org.assertj.core.util.Lists;
@@ -31,10 +32,13 @@ public class MultiplicationServiceImplTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private EventDispatcher eventDispatcher;
+
     @Before
     public void setUp() {
         MockitoAnnotations.initMocks(this);
-        multiplicationServiceImpl = new MultiplicationServiceImpl(randomGeneratorService, attemptRepository, userRepository);
+        multiplicationServiceImpl = new MultiplicationServiceImpl(randomGeneratorService, attemptRepository, userRepository, eventDispatcher);
     }
 
     @Test

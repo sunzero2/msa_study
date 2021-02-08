@@ -1,5 +1,7 @@
 package com.example.gamification.service.impl;
 
+import com.example.gamification.client.MultiplicationResultAttemptClient;
+import com.example.gamification.client.dto.MultiplicationResultAttempt;
 import com.example.gamification.domain.Badge;
 import com.example.gamification.domain.BadgeCard;
 import com.example.gamification.domain.GameStats;
@@ -18,12 +20,16 @@ import java.util.stream.Collectors;
 @Service
 @Slf4j
 public class GameServiceImpl implements GameService {
+    public static final int LUCKY_NUMBER = 42;
+
     private ScoreCardRepository scoreCardRepository;
     private BadgeCardRepository badgeCardRepository;
+    private MultiplicationResultAttemptClient attemptClient;
 
-    GameServiceImpl(ScoreCardRepository scoreCardRepository, BadgeCardRepository badgeCardRepository) {
+    GameServiceImpl(ScoreCardRepository scoreCardRepository, BadgeCardRepository badgeCardRepository, MultiplicationResultAttemptClient attemptClient) {
         this.badgeCardRepository = badgeCardRepository;
         this.scoreCardRepository = scoreCardRepository;
+        this.attemptClient = attemptClient;
     }
 
     @Override
@@ -44,19 +50,38 @@ public class GameServiceImpl implements GameService {
     private List<BadgeCard> processForBadges(final Long userId, final Long attemptId) {
         List<BadgeCard> badgeCards = new ArrayList<>();
         int totalScore = scoreCardRepository.getTotalScoreForUser(userId);
-        log.info("사용자 ID {}의 새로운 점수 {}", userId, totalScore);
+        log.info("사용자 {}의 새로운 점수 {}", userId, totalScore);
+
         List<ScoreCard> scoreCardList = scoreCardRepository.findByUserIdOrderByScoreTimeStampDesc(userId);
         List<BadgeCard> badgeCardList = badgeCardRepository.findByUserIdOrderByBadgeTimestampDesc(userId);
 
         // 점수 기반 배지
-        checkAndGiveBadgeBasedOnScore(badgeCardList, Badge.BRONZE_MULTIPLICATION, totalScore, 100, userId).ifPresent(badgeCards::add);
-        checkAndGiveBadgeBasedOnScore(badgeCardList, Badge.SILVER_MULTIPLICATION, totalScore, 500, userId).ifPresent(badgeCards::add);
-        checkAndGiveBadgeBasedOnScore(badgeCardList, Badge.GOLD_MULTIPLICATION, totalScore, 999, userId).ifPresent(badgeCards::add);
+        checkAndGiveBadgeBasedOnScore(badgeCardList,
+                Badge.BRONZE_MULTIPLICATOR, totalScore, 100, userId)
+                .ifPresent(badgeCards::add);
+        checkAndGiveBadgeBasedOnScore(badgeCardList,
+                Badge.SILVER_MULTIPLICATOR, totalScore, 500, userId)
+                .ifPresent(badgeCards::add);
+        checkAndGiveBadgeBasedOnScore(badgeCardList,
+                Badge.GOLD_MULTIPLICATOR, totalScore, 999, userId)
+                .ifPresent(badgeCards::add);
 
-        // 첫번째 정답 배지
-        if (scoreCardList.size() == 1 && !containsBadge(badgeCardList, Badge.FIRST_WON)) {
+        // 첫 번째 정답 배지
+        if (scoreCardList.size() == 1 &&
+                !containsBadge(badgeCardList, Badge.FIRST_WON)) {
             BadgeCard firstWonBadge = giveBadgeToUser(Badge.FIRST_WON, userId);
-            badgeCards.add((firstWonBadge));
+            badgeCards.add(firstWonBadge);
+        }
+
+        // 행운의 숫자 배지
+        MultiplicationResultAttempt attempt = attemptClient
+                .retrieveMultiplicationResultAttemptById(attemptId);
+        if (!containsBadge(badgeCardList, Badge.LUCKY_NUMBER) &&
+                (LUCKY_NUMBER == attempt.getMultiplicationFactorA() ||
+                        LUCKY_NUMBER == attempt.getMultiplicationFactorB())) {
+            BadgeCard luckyNumberBadge = giveBadgeToUser(
+                    Badge.LUCKY_NUMBER, userId);
+            badgeCards.add(luckyNumberBadge);
         }
 
         return badgeCards;
