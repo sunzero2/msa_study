@@ -1,4 +1,4 @@
-package com.example.gamification.config;
+package com.example.gamification.configuration;
 
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
